@@ -1,45 +1,37 @@
 import { Injectable } from '@nestjs/common';
-import { Todos } from './todos.interface';
-import { CreateTodoDto } from './DTO/create-todo.dto';
-import { v4 as uuidv4 } from 'uuid';
-import { HttpException } from '@nestjs/common/exceptions';
-import { HttpStatus } from '@nestjs/common/enums';
+import { InjectModel } from '@nestjs/mongoose';
+import mongoose from 'mongoose';
+import { Todos } from './schema/todos.schema';
 
 @Injectable()
 export class TodosService {
-  private TodoItem: Todos[] = [];
-
-  findAll(): Todos[] {
-    return this.TodoItem;
+  constructor(
+    @InjectModel(Todos.name)
+    private TodoItem: mongoose.Model<Todos>,
+  ) {}
+  async findQuery(): Promise<Todos[]> {
+    const res = await this.TodoItem.find();
+    return res;
+  }
+  async createTodo(todo: Todos): Promise<Todos> {
+    const res = await this.TodoItem.create(todo);
+    return res;
   }
 
-  findTodo(createTodoDto: CreateTodoDto): Todos[] {
-    let todos = this.findAll();
-    const { text } = createTodoDto;
-
-    if (text) {
-      todos = todos.filter((i) => i.text.toLowerCase().includes(text));
-    }
-
-    return todos;
+  async findById(id: string): Promise<Todos> {
+    const res = await this.TodoItem.findById(id);
+    return res;
   }
-  findById(id: string): Todos {
-    return this.TodoItem.find((i) => i.id === id);
-  }
-  createTodo(createTodoDto: CreateTodoDto) {
-    const { onCompleted, text } = createTodoDto;
 
-    const todo = {
-      id: uuidv4(),
-      text,
-      onCompleted: false,
-    };
-
-    this.TodoItem.push(todo);
-    return todo;
+  async updateTodo(id: string, todo: Todos): Promise<Todos> {
+    const res = await this.TodoItem.findByIdAndUpdate(id, todo, {
+      new: true,
+      runValidators: true,
+    });
+    return res;
   }
-  deleteTodo(id: string): void {
-    this.TodoItem = this.TodoItem.filter((i) => i.id !== id);
-    throw new HttpException('Deleted Todos', HttpStatus.OK);
+  async deleteTodo(id: string): Promise<Todos> {
+    const res = await this.TodoItem.findByIdAndDelete(id);
+    return res;
   }
 }
